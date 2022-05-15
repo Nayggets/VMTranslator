@@ -110,7 +110,7 @@ void CodeTranslator::translateToCode(std::string line)
     auto begin = std::begin(line);
     auto endCommand = std::begin(line);
     int commandNumber = 0;
-    for (int i = 0; i < line.size(); i++)
+    for (int i = 0; i < line.size() + 1; i++)
     {
         endCommand = std::begin(line) + i;
         checkCommand = {begin, endCommand};
