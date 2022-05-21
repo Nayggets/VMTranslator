@@ -28,6 +28,13 @@ int main(int argc, char* argv[])
         realname.push_back(nameBefore[i]);
     }
 
+    bool notDirectory = false;
+    for(auto& c : realname){
+        if(c == '.'){
+            notDirectory = true;
+        }
+    }
+
     CodeReader c(argv[1]);
     std::vector<std::string> buffer = c.fillBuffer();
     CodeTranslator c1(buffer,realname);
