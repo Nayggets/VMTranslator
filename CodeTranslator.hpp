@@ -7,10 +7,10 @@
 class CodeTranslator
 {
 public:
-    CodeTranslator(std::vector<std::string>& codeToTranslate,const std::string& line); //for unique file
-    CodeTranslator(std::unordered_map<std::vector<std::string>,std::string>); // for folders
+    CodeTranslator(bool Sysvm); // for file Sysvm false else true
     ~CodeTranslator();
-    std::vector<std::string> allTranslate();
+    void translate_file(std::vector<std::string> codeToTranslateNotClean,std::string filename);
+    std::vector<std::string> return_translate_code();
 
 private:
     std::vector<std::string> codeToTranslate;

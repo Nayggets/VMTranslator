@@ -1,6 +1,7 @@
 #include "CodeReader.hpp"
 CodeReader::CodeReader(std::string fileName)
 {
+    
     reader = std::ifstream(fileName);
 }
 

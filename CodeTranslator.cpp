@@ -17,18 +17,15 @@ bool correctLine(std::string& line)
     return true;
 }
 
-CodeTranslator::CodeTranslator(std::vector<std::string>& codeToTranslateNotClean,const std::string& filename)
+CodeTranslator::CodeTranslator(bool Sysvm)
 {
+    lt = 1;
+    gt = 1;
+    eq = 1;
     returnNumber = 1;
-    this->filename = filename;
-    int i = 0;
-    while(this->filename[i] != '.'){
-        i++;
+    if(Sysvm == true){
+        assembly_bootstrap();
     }
-    for(; i < filename.size() ;){
-        this->filename.pop_back();
-    }
-
     lineOfCommand = {
         {"add",1},
         {"sub",2},
@@ -45,7 +42,8 @@ CodeTranslator::CodeTranslator(std::vector<std::string>& codeToTranslateNotClean
         {"goto",13},
         {"if-goto",14},
         {"label",15},
-        {"fonction",16}
+        {"function",16},
+        {"return",17}
     };
     memorySegment = {
         {"constant",1},
@@ -57,18 +55,13 @@ CodeTranslator::CodeTranslator(std::vector<std::string>& codeToTranslateNotClean
         {"temp",7},
         {"pointer",8}
     };
-    for (auto& e : codeToTranslateNotClean)
-    {
-        if(correctLine(e)){
-            codeToTranslate.push_back(e);
-        }
-    }
 }
 
-CodeTranslator::CodeTranslator(std::unordered_map<std::vector<std::string>,std::string> folderCodePerFile)
-{
 
-}
+
+
+
+
 
 CodeTranslator::~CodeTranslator()
 {
@@ -87,7 +80,7 @@ void CodeTranslator::translate_code(const std::string& line)
         checkCommand = {begin, endCommand};
         commandNumber = lineOfCommand[checkCommand];
         if(commandNumber != 0){
-            i = line.size();
+            i = line.size() + 1;
             if(commandNumber < 10){
                 choose_arithmetic_operation(commandNumber);
             }
@@ -111,6 +104,9 @@ void CodeTranslator::translate_code(const std::string& line)
             }
             else if(commandNumber == 16){
                 assembly_fonction(line);
+            }
+            else if(commandNumber == 17){
+                assembly_return();
             }
         }
     }
@@ -154,7 +150,7 @@ void CodeTranslator::choose_arithmetic_operation(int numberCommand)
 void CodeTranslator::assembly_label(const std::string& line)
 {
 
-    std::string labelName = {std::begin(line) + 5,std::end(line)};
+    std::string labelName = {std::begin(line) + 6,std::end(line) - 1};
     labelName = {"(" + labelName + ")"};
     codeTranslate.push_back(labelName);
     
@@ -164,53 +160,55 @@ void CodeTranslator::assembly_return()
 {
     codeTranslate.push_back("@LCL");
     codeTranslate.push_back("D=M");
-    codeTranslate.push_back("@13");
+    codeTranslate.push_back("@14");
     codeTranslate.push_back("M=D");
     codeTranslate.push_back("@5");
     codeTranslate.push_back("D=A");
     codeTranslate.push_back("@LCL");
-    codeTranslate.push_back("A=D-A");
+    codeTranslate.push_back("A=M-D");
     codeTranslate.push_back("D=M");
-    codeTranslate.push_back("@14");
+    codeTranslate.push_back("@15");
     codeTranslate.push_back("M=D");
 
     codeTranslate.push_back("@SP");
-    codeTranslate.push_back("A=M");
+    codeTranslate.push_back("A=M-1");
     codeTranslate.push_back("D=M");
     codeTranslate.push_back("@ARG");
     codeTranslate.push_back("A=M");
     codeTranslate.push_back("M=D");
-    codeTranslate.push_back("@ARG");
+
+
+    codeTranslate.push_back("@ARG");//
     codeTranslate.push_back("D=M");
     codeTranslate.push_back("@SP");
     codeTranslate.push_back("M=D+1");
     
-    codeTranslate.push_back("@13");
+    codeTranslate.push_back("@14"); //THAT
     codeTranslate.push_back("AM=M-1");
     codeTranslate.push_back("D=M");
     codeTranslate.push_back("@THAT");
     codeTranslate.push_back("M=D");
 
-    codeTranslate.push_back("@13");
+    codeTranslate.push_back("@14"); //THIS
     codeTranslate.push_back("AM=M-1");
     codeTranslate.push_back("D=M");
     codeTranslate.push_back("@THIS");
     codeTranslate.push_back("M=D");
 
-    codeTranslate.push_back("@13");
+    codeTranslate.push_back("@14"); //ARG
     codeTranslate.push_back("AM=M-1");
     codeTranslate.push_back("D=M");
     codeTranslate.push_back("@ARG");
     codeTranslate.push_back("M=D");
 
-    codeTranslate.push_back("@13");
+    codeTranslate.push_back("@14"); //LCL
     codeTranslate.push_back("AM=M-1");
     codeTranslate.push_back("D=M");
     codeTranslate.push_back("@LCL");
     codeTranslate.push_back("M=D");
 
 
-    codeTranslate.push_back("@14");
+    codeTranslate.push_back("@15");
     codeTranslate.push_back("A=M");
     codeTranslate.push_back("0;JMP");
 
@@ -222,7 +220,7 @@ void CodeTranslator::assembly_return()
 void CodeTranslator::assembly_goto(const std::string& line)
 {
     
-    std::string jumpName = {std::begin(line) + 4,std::end(line)};
+    std::string jumpName = {std::begin(line) + 5,std::end(line) - 1};
     jumpName = {"@" + jumpName};
     codeTranslate.push_back(jumpName);
     codeTranslate.push_back("0;JMP");
@@ -230,24 +228,24 @@ void CodeTranslator::assembly_goto(const std::string& line)
 
 void CodeTranslator::assembly_if_goto(const std::string& line)
 {
-    std::string jumpName = {std::begin(line) + 5,std::end(line)};
+    std::string jumpName = {std::begin(line) + 8,std::end(line) - 1};
     jumpName = {"@" + jumpName};
     codeTranslate.push_back("@SP");
     codeTranslate.push_back("AM=M-1");
     codeTranslate.push_back("D=M");
     codeTranslate.push_back(jumpName);
-    codeTranslate.push_back("D;JLT");
+    codeTranslate.push_back("D;JNE");
 }
 
 void CodeTranslator::assembly_fonction(const std::string& line)
 {
     int i = 0 ; 
-    while(line[i] > '9' || line[i] < '0'){
+    while((line[i] > '9' || line[i] < '0') || line[i-1] != ' '){
         i++;
     }
     i--;
-    std::string jumpName = {std::begin(line) + 4,std::begin(line) + i};
-    jumpName = {"(" + filename + '.' + jumpName + ")"};
+    std::string jumpName = {std::begin(line) + 9,std::begin(line) + i};
+    jumpName = {"(" + jumpName + ")"};
     std::string number {""};
     i = 0;
     while(line[i] > '9' || line[i] < '0'){
@@ -257,7 +255,9 @@ void CodeTranslator::assembly_fonction(const std::string& line)
         number.push_back(line[i]);
         i++;
     }
+    codeTranslate.push_back(jumpName);
     int localNumber = std::stoi(number);
+    std::cout << localNumber << std::endl;
     for(int i = 0 ; i < localNumber ; i++){
         codeTranslate.push_back("@SP");
         codeTranslate.push_back("A=M");
@@ -265,21 +265,24 @@ void CodeTranslator::assembly_fonction(const std::string& line)
         codeTranslate.push_back("@SP");
         codeTranslate.push_back("M=M+1");
     }
+
 }
 
 void CodeTranslator::assembly_call(const std::string& line)
 {
     std::string number {""};
     int i = 0;
-    while(line[i] > '9' || line[i] < '0'){
+    while((line[i] > '9' || line[i] < '0') || line[i-1] != ' '){
         i++;
     }
     while(line[i] <= '9' && line[i] >= '0'){
         number.push_back(line[i]);
         i++;
     }
+    
     number = "@" + number;
-    codeTranslate.push_back("@" +  filename + "$.ret" + std::to_string(returnNumber));
+    
+    codeTranslate.push_back("@" +  filename + "$.ret" + std::to_string(returnNumber)); //
     codeTranslate.push_back("D=A");
     codeTranslate.push_back("@SP");
     codeTranslate.push_back("A=M");
@@ -287,28 +290,32 @@ void CodeTranslator::assembly_call(const std::string& line)
     codeTranslate.push_back("@SP");
     codeTranslate.push_back("M=M+1");
 
-    codeTranslate.push_back("@LCL");
+    codeTranslate.push_back("@LCL"); // store LCL
     codeTranslate.push_back("D=M");
     codeTranslate.push_back("@SP");
     codeTranslate.push_back("A=M");
     codeTranslate.push_back("M=D");
     codeTranslate.push_back("@SP");
     codeTranslate.push_back("M=M+1");
-    codeTranslate.push_back("@ARG");
+
+    codeTranslate.push_back("@ARG"); //store ARG
     codeTranslate.push_back("D=M");
     codeTranslate.push_back("@SP");
     codeTranslate.push_back("A=M");
     codeTranslate.push_back("M=D");
     codeTranslate.push_back("@SP");
     codeTranslate.push_back("M=M+1");
-    codeTranslate.push_back("@THIS");
+
+
+    codeTranslate.push_back("@THIS"); //push this
     codeTranslate.push_back("D=M");
     codeTranslate.push_back("@SP");
     codeTranslate.push_back("A=M");
     codeTranslate.push_back("M=D");
     codeTranslate.push_back("@SP");
     codeTranslate.push_back("M=M+1");
-    codeTranslate.push_back("@THAT");
+
+    codeTranslate.push_back("@THAT"); // push that
     codeTranslate.push_back("D=M");
     codeTranslate.push_back("@SP");
     codeTranslate.push_back("A=M");
@@ -319,35 +326,41 @@ void CodeTranslator::assembly_call(const std::string& line)
     codeTranslate.push_back("D=M");
     codeTranslate.push_back("@5");
     codeTranslate.push_back("D=D-A");
-    codeTranslate.push_back(number);
-    codeTranslate.push_back("D=D-A");
+    codeTranslate.push_back(number); // 
+    codeTranslate.push_back("D=D-A");//change here
     codeTranslate.push_back("@ARG");
     codeTranslate.push_back("M=D");
     codeTranslate.push_back("@SP");
     codeTranslate.push_back("D=M");
-    codeTranslate.push_back("LCL");
+    codeTranslate.push_back("@LCL");
     codeTranslate.push_back("M=D");
 
     i = 0 ; 
-    while(line[i] > '9' || line[i] < '0'){
+    while((line[i] > '9' || line[i] < '0') || line[i-1] != ' '){
         i++;
     }
     i--;
 
-    std::string jumpName = {std::begin(line) + 4,std::begin(line) + i};
-    jumpName = {"@" + filename + '.' + jumpName};
+    std::string jumpName = {std::begin(line) + 5,std::begin(line) + i};
+    jumpName = {"@" + jumpName};
     codeTranslate.push_back(jumpName);
     codeTranslate.push_back("0;JMP");
     codeTranslate.push_back("(" + filename + "$.ret" + std::to_string(returnNumber) + ")");
+    returnNumber++;
 
 }
 
 void CodeTranslator::assembly_bootstrap()
 {
     codeTranslate.push_back("@256");
-    codeTranslate.push_back("D=M");
+    codeTranslate.push_back("D=A");
     codeTranslate.push_back("@SP");
     codeTranslate.push_back("M=D");
+    assembly_call("call Sys.init 0");
+    codeTranslate.push_back("(END)");
+    codeTranslate.push_back("@END");
+    codeTranslate.push_back("0;JMP");
+    
 }
 
 void CodeTranslator::assembly_add()
@@ -769,11 +782,55 @@ void CodeTranslator::assembly_pop(const std::string& line)
 }
 
 
-std::vector<std::string> CodeTranslator::allTranslate()
+
+
+void CodeTranslator::translate_file(std::vector<std::string> codeToTranslateNotClean,std::string filename) // for multiplefile 
 {
+    std::cout << "coucou c'est le file : " << filename << std::endl;
+    codeToTranslate.clear();
+    int check = 0;
+    int j = 0; 
+    for(int i = 0 ; i < filename.size()-1 ;i++){
+        if(filename[i] == '/'){
+            check++;
+        }
+    }
+    int othercheck = 0;
+    while(othercheck != check){
+        if(filename[j] == '/'){
+            othercheck++;
+        }
+        j++;
+    }
+
+    this->filename = {""};
+    for(int i = j ; i < filename.size(); i++){
+        this->filename.push_back(filename[i]);
+    }
+    for(auto& e : codeToTranslateNotClean)
+    {
+        if(correctLine(e)){
+            codeToTranslate.push_back(e);
+        }
+    }
+
+    returnNumber = 1;
+    int i = 0;
+    while(this->filename[i] != '.'){
+        i++;
+    }
+    for(; i < this->filename.size() ;){
+        this->filename.pop_back();
+    }
     for(auto& e : codeToTranslate)
     {
         translate_code(e);
+        std::cout << e << std::endl;
     }
+}
+
+
+std::vector<std::string> CodeTranslator::return_translate_code()
+{
     return codeTranslate;
 }
