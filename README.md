@@ -9,4 +9,5 @@ I done the nand2tetris courses and i done this project to understand what a 2 ti
 * [x] Code Reader
 * [x] Code Translator
 * [x] Code Writter
+* [x] Main
 
